@@ -303,38 +303,15 @@ let cambiando = false;
 
 function cargarCancion(index, desde = 0) {
   cambiando = true;
-
-  // Fade OUT de la canción actual
-  const fadeOut = setInterval(() => {
-    if (music.volume > 0.02) {
-      music.volume = Math.max(0, music.volume - 0.02);
-    } else {
-      clearInterval(fadeOut);
-      music.volume = 0;
-
-      // Cargar nueva canción
-      music.src    = playlist[index];
-      music.load();
-      music.oncanplay = () => {
-        music.oncanplay = null;
-        if (desde > 0) music.currentTime = desde;
-        music.play().catch(() => {});
-
-        // Fade IN de la nueva canción
-        const targetVol = volumenes[index];
-        music.volume = 0;
-        const fadeIn = setInterval(() => {
-          if (music.volume < targetVol - 0.02) {
-            music.volume = Math.min(targetVol, music.volume + 0.02);
-          } else {
-            music.volume = targetVol;
-            clearInterval(fadeIn);
-            setTimeout(() => { cambiando = false; }, 500);
-          }
-        }, 50);
-      };
-    }
-  }, 50);
+  music.src    = playlist[index];
+  music.volume = volumenes[index];
+  music.load();
+  music.oncanplay = () => {
+    music.oncanplay = null;
+    if (desde > 0) music.currentTime = desde;
+    music.play().catch(() => {});
+    setTimeout(() => { cambiando = false; }, 1000);
+  };
 }
 
 music.addEventListener("timeupdate", () => {
