@@ -276,77 +276,114 @@ document.addEventListener("DOMContentLoaded", function () {
   cerrarAlFondo("secretariasModal");
 
   /* ===== MÚSICA CON PROGRESO GUARDADO ===== */
-  const music    = document.getElementById("bg-music");
-  const musicBtn = document.getElementById("music-btn");
+const music    = document.getElementById("bg-music");
+const musicBtn = document.getElementById("music-btn");
 
-  const playlist = [
-    "musica/Milky - Just The Way You Are (Sub. Español  Lyrics)  Pibble Song.mp3",
-    "musica/MY TALKING TOM - CAKE TOWER SOUNDTRACK OST.mp3",
-    "musica/Sweet Sweet Canyon - Mario Kart 8 OST.mp3",
-    "musica/Animal Crossing - Bubblegum K.K. [Remix].mp3"
-  ];
-
-  // Recuperar progreso guardado
-  let trackActual = parseInt(localStorage.getItem("musicTrack")) || 0;
-  let tiempoGuardado = parseFloat(localStorage.getItem("musicTiempo")) || 0;
-
-  // Validar que el track guardado sea válido
-  if (trackActual >= playlist.length) trackActual = 0;
-
-  const volumenes = [
-  0.15,  // Milky
-  1.0,   // My Talking Tom
-  0.50,   // Sweet Sweet Canyon
-  0.50,   // Animal Crossing
+const playlist = [
+  "musica/Just the way you are milky best part loop.mp3",
+  "musica/MY TALKING TOM - CAKE TOWER SOUNDTRACK OST.mp3",
+  "musica/Sweet Sweet Canyon - Mario Kart 8 OST.mp3",
+  "musica/Animal Crossing - Bubblegum K.K. [Remix].mp3",
+  "musica/Kirby's Return to Dream Land  Adventure Wii - Menu.mp3"
 ];
 
+const volumenes = [
+  0.15,
+  1.0,
+  0.50,
+  0.50,
+  0.50,
+];
+
+let trackActual    = parseInt(localStorage.getItem("musicTrack")) || 0;
+let tiempoGuardado = parseFloat(localStorage.getItem("musicTiempo")) || 0;
+if (trackActual >= playlist.length) trackActual = 0;
+
+let cambiando = false;
+
 function cargarCancion(index, desde = 0) {
-    music.src = playlist[index];
-    music.volume = volumenes[index];
-    music.load();
-    music.addEventListener("canplay", () => {
-      if (desde > 0) music.currentTime = desde;
-      music.play().catch(()=>{});
-    }, { once: true });
+  cambiando = true;
+
+  // Fade OUT de la canción actual
+  const fadeOut = setInterval(() => {
+    if (music.volume > 0.02) {
+      music.volume = Math.max(0, music.volume - 0.02);
+    } else {
+      clearInterval(fadeOut);
+      music.volume = 0;
+
+      // Cargar nueva canción
+      music.src    = playlist[index];
+      music.load();
+      music.oncanplay = () => {
+        music.oncanplay = null;
+        if (desde > 0) music.currentTime = desde;
+        music.play().catch(() => {});
+
+        // Fade IN de la nueva canción
+        const targetVol = volumenes[index];
+        music.volume = 0;
+        const fadeIn = setInterval(() => {
+          if (music.volume < targetVol - 0.02) {
+            music.volume = Math.min(targetVol, music.volume + 0.02);
+          } else {
+            music.volume = targetVol;
+            clearInterval(fadeIn);
+            setTimeout(() => { cambiando = false; }, 500);
+          }
+        }, 50);
+      };
+    }
+  }, 50);
 }
-  // Guardar progreso cada segundo
-  music.addEventListener("timeupdate", () => {
-    localStorage.setItem("musicTrack", trackActual);
-    localStorage.setItem("musicTiempo", music.currentTime);
-  });
 
-  // Al terminar canción, pasar a la siguiente
-  music.addEventListener("ended", () => {
-    trackActual = (trackActual + 1) % playlist.length;
-    localStorage.setItem("musicTrack", trackActual);
-    localStorage.setItem("musicTiempo", 0);
-    cargarCancion(trackActual, 0);
-  });
+music.addEventListener("timeupdate", () => {
+  localStorage.setItem("musicTrack",  trackActual);
+  localStorage.setItem("musicTiempo", music.currentTime);
+});
 
-  if (music && musicBtn) {
-    musicBtn.classList.add("muted");
+music.addEventListener("ended", () => {
+  trackActual = (trackActual + 1) % playlist.length;
+  localStorage.setItem("musicTrack",  trackActual);
+  localStorage.setItem("musicTiempo", 0);
+  cargarCancion(trackActual, 0);
+});
 
-    // Al primer click carga desde donde quedó
-    document.addEventListener("click", () => {
+setInterval(() => {
+  if (!music.paused && !music.muted && !cambiando && music.duration > 0) {
+    if (music.currentTime >= music.duration - 0.5) {
+      trackActual = (trackActual + 1) % playlist.length;
+      localStorage.setItem("musicTrack",  trackActual);
+      localStorage.setItem("musicTiempo", 0);
+      cargarCancion(trackActual, 0);
+    }
+  }
+}, 1000);
+
+if (music && musicBtn) {
+  musicBtn.classList.add("muted");
+
+  document.addEventListener("click", () => {
+    music.muted = false;
+    cargarCancion(trackActual, tiempoGuardado);
+    musicBtn.textContent = "🔊";
+    musicBtn.classList.replace("muted", "playing");
+  }, { once: true });
+
+  musicBtn.addEventListener("click", e => {
+    e.stopPropagation();
+    if (music.muted || music.paused) {
       music.muted = false;
-      cargarCancion(trackActual, tiempoGuardado);
+      music.play().catch(() => {});
       musicBtn.textContent = "🔊";
       musicBtn.classList.replace("muted", "playing");
-    }, { once: true });
-
-    musicBtn.addEventListener("click", e => {
-      e.stopPropagation();
-      if (music.muted || music.paused) {
-        music.muted = false; music.play().catch(()=>{});
-        musicBtn.textContent = "🔊";
-        musicBtn.classList.replace("muted", "playing");
-      } else {
-        music.muted = true;
-        musicBtn.textContent = "🔇";
-        musicBtn.classList.replace("playing", "muted");
-      }
-    });
-  }
+    } else {
+      music.muted = true;
+      musicBtn.textContent = "🔇";
+      musicBtn.classList.replace("playing", "muted");
+    }
+  });
+}
 
   /* ===== PUBLICIDAD ===== */
   const ad      = document.getElementById("adModal");
