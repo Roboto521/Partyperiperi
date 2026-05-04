@@ -29,6 +29,7 @@ onValue(ref(db, "stock"), (snap) => {
   const stockData = snap.val() || {};
   window._stockActual = stockData;
 
+  /* — Botones normales de productos — */
   document.querySelectorAll(".add-to-cart:not(.sin-stock-fijo)").forEach(btn => {
     const nombre   = btn.dataset.name;
     if (!nombre) return;
@@ -69,6 +70,30 @@ onValue(ref(db, "stock"), (snap) => {
       }
     }
   });
+
+  /* — Botones del SLIDER — se ponen grises si el producto tiene 0 stock — */
+  document.querySelectorAll(".btn-1[onclick*='agregarDesdeSlider']").forEach(btn => {
+    const match = btn.getAttribute("onclick").match(/agregarDesdeSlider\('(.+?)'\)/);
+    if (!match) return;
+    const nombre   = match[1];
+    const cantidad = stockData[nombre];
+    const sinStock = cantidad !== undefined && cantidad <= 0;
+
+    if (sinStock) {
+      btn.textContent         = "Sin Stock ❌";
+      btn.style.background    = "#ccc";
+      btn.style.cursor        = "not-allowed";
+      btn.style.pointerEvents = "none";
+      btn.style.opacity       = "0.7";
+    } else {
+      btn.textContent         = "Comprar";
+      btn.style.background    = "";
+      btn.style.cursor        = "";
+      btn.style.pointerEvents = "";
+      btn.style.opacity       = "";
+    }
+  });
+
 });
 
 /* ===== INICIALIZAR STOCK ===== */
