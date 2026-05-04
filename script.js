@@ -66,9 +66,23 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  /* ===== SLIDER ===== */
+  /* ===== SLIDER — CORREGIDO ===== */
   window.agregarDesdeSlider = function(name) {
-    document.querySelector(`.add-to-cart[data-name="${name}"]`)?.click();
+    // Busca el primer botón con ese nombre que NO esté deshabilitado ni sin stock
+    const btn = document.querySelector(`.add-to-cart[data-name="${name}"]:not(.sin-stock):not([disabled])`);
+    if (!btn) {
+      mostrarToast(`📦 "${name}" no está disponible en este momento`, "#9d6bff");
+      return;
+    }
+    // Dispara el evento agregarProducto directamente (mismo sistema que usa el carrito)
+    document.dispatchEvent(new CustomEvent('agregarProducto', {
+      detail: {
+        name  : btn.dataset.name,
+        price : btn.dataset.price,
+        img   : btn.dataset.img
+      }
+    }));
+    // Abre el dropdown del carrito
     const dropdown = document.getElementById('cart-dropdown');
     if (dropdown) dropdown.style.display = 'block';
   };
@@ -134,6 +148,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
+  // Escucha el evento global (usado por agregarDesdeSlider y otros)
   document.addEventListener('agregarProducto', e => {
     agregarAlCarrito(e.detail.name, e.detail.price, e.detail.img);
   });
@@ -276,91 +291,91 @@ document.addEventListener("DOMContentLoaded", function () {
   cerrarAlFondo("secretariasModal");
 
   /* ===== MÚSICA CON PROGRESO GUARDADO ===== */
-const music    = document.getElementById("bg-music");
-const musicBtn = document.getElementById("music-btn");
+  const music    = document.getElementById("bg-music");
+  const musicBtn = document.getElementById("music-btn");
 
-const playlist = [
-  "musica/Just the way you are milky best part loop.mp3",
-  "musica/MY TALKING TOM - CAKE TOWER SOUNDTRACK OST.mp3",
-  "musica/Sweet Sweet Canyon - Mario Kart 8 OST.mp3",
-  "musica/Animal Crossing - Bubblegum K.K. [Remix].mp3",
-  "musica/Kirby's Return to Dream Land  Adventure Wii - Menu.mp3"
-];
+  const playlist = [
+    "musica/Just the way you are milky best part loop.mp3",
+    "musica/MY TALKING TOM - CAKE TOWER SOUNDTRACK OST.mp3",
+    "musica/Sweet Sweet Canyon - Mario Kart 8 OST.mp3",
+    "musica/Animal Crossing - Bubblegum K.K. [Remix].mp3",
+    "musica/Kirby's Return to Dream Land  Adventure Wii - Menu.mp3"
+  ];
 
-const volumenes = [
-  0.15,
-  1.0,
-  0.50,
-  0.50,
-  0.50,
-];
+  const volumenes = [
+    0.15,
+    1.0,
+    0.50,
+    0.50,
+    0.50,
+  ];
 
-let trackActual    = parseInt(localStorage.getItem("musicTrack")) || 0;
-let tiempoGuardado = parseFloat(localStorage.getItem("musicTiempo")) || 0;
-if (trackActual >= playlist.length) trackActual = 0;
+  let trackActual    = parseInt(localStorage.getItem("musicTrack")) || 0;
+  let tiempoGuardado = parseFloat(localStorage.getItem("musicTiempo")) || 0;
+  if (trackActual >= playlist.length) trackActual = 0;
 
-let cambiando = false;
+  let cambiando = false;
 
-function cargarCancion(index, desde = 0) {
-  cambiando = true;
-  music.src    = playlist[index];
-  music.volume = volumenes[index];
-  music.load();
-  music.oncanplay = () => {
-    music.oncanplay = null;
-    if (desde > 0) music.currentTime = desde;
-    music.play().catch(() => {});
-    setTimeout(() => { cambiando = false; }, 1000);
-  };
-}
-
-music.addEventListener("timeupdate", () => {
-  localStorage.setItem("musicTrack",  trackActual);
-  localStorage.setItem("musicTiempo", music.currentTime);
-});
-
-music.addEventListener("ended", () => {
-  trackActual = (trackActual + 1) % playlist.length;
-  localStorage.setItem("musicTrack",  trackActual);
-  localStorage.setItem("musicTiempo", 0);
-  cargarCancion(trackActual, 0);
-});
-
-setInterval(() => {
-  if (!music.paused && !music.muted && !cambiando && music.duration > 0) {
-    if (music.currentTime >= music.duration - 0.5) {
-      trackActual = (trackActual + 1) % playlist.length;
-      localStorage.setItem("musicTrack",  trackActual);
-      localStorage.setItem("musicTiempo", 0);
-      cargarCancion(trackActual, 0);
-    }
-  }
-}, 1000);
-
-if (music && musicBtn) {
-  musicBtn.classList.add("muted");
-
-  document.addEventListener("click", () => {
-    music.muted = false;
-    cargarCancion(trackActual, tiempoGuardado);
-    musicBtn.textContent = "🔊";
-    musicBtn.classList.replace("muted", "playing");
-  }, { once: true });
-
-  musicBtn.addEventListener("click", e => {
-    e.stopPropagation();
-    if (music.muted || music.paused) {
-      music.muted = false;
+  function cargarCancion(index, desde = 0) {
+    cambiando = true;
+    music.src    = playlist[index];
+    music.volume = volumenes[index];
+    music.load();
+    music.oncanplay = () => {
+      music.oncanplay = null;
+      if (desde > 0) music.currentTime = desde;
       music.play().catch(() => {});
+      setTimeout(() => { cambiando = false; }, 1000);
+    };
+  }
+
+  music.addEventListener("timeupdate", () => {
+    localStorage.setItem("musicTrack",  trackActual);
+    localStorage.setItem("musicTiempo", music.currentTime);
+  });
+
+  music.addEventListener("ended", () => {
+    trackActual = (trackActual + 1) % playlist.length;
+    localStorage.setItem("musicTrack",  trackActual);
+    localStorage.setItem("musicTiempo", 0);
+    cargarCancion(trackActual, 0);
+  });
+
+  setInterval(() => {
+    if (!music.paused && !music.muted && !cambiando && music.duration > 0) {
+      if (music.currentTime >= music.duration - 0.5) {
+        trackActual = (trackActual + 1) % playlist.length;
+        localStorage.setItem("musicTrack",  trackActual);
+        localStorage.setItem("musicTiempo", 0);
+        cargarCancion(trackActual, 0);
+      }
+    }
+  }, 1000);
+
+  if (music && musicBtn) {
+    musicBtn.classList.add("muted");
+
+    document.addEventListener("click", () => {
+      music.muted = false;
+      cargarCancion(trackActual, tiempoGuardado);
       musicBtn.textContent = "🔊";
       musicBtn.classList.replace("muted", "playing");
-    } else {
-      music.muted = true;
-      musicBtn.textContent = "🔇";
-      musicBtn.classList.replace("playing", "muted");
-    }
-  });
-}
+    }, { once: true });
+
+    musicBtn.addEventListener("click", e => {
+      e.stopPropagation();
+      if (music.muted || music.paused) {
+        music.muted = false;
+        music.play().catch(() => {});
+        musicBtn.textContent = "🔊";
+        musicBtn.classList.replace("muted", "playing");
+      } else {
+        music.muted = true;
+        musicBtn.textContent = "🔇";
+        musicBtn.classList.replace("playing", "muted");
+      }
+    });
+  }
 
   /* ===== PUBLICIDAD ===== */
   const ad      = document.getElementById("adModal");
