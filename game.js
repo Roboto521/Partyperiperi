@@ -75,10 +75,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function recycleParticle(p) { if (particlePool.length < 80) particlePool.push(p); }
 
   function getLevelConfig(l) {
-    // Congelar dificultad en nivel 28 — nivel visual sigue subiendo, bolas no
     if (l > 28) l = 28;
-
-    // Mismo para PC y móvil — arranca movido, nivel 28 es un reto serio
     if (l<=2)  return {speed:220, sv:50,  int:0.90, max:5,  w:18};
     if (l<=4)  return {speed:270, sv:60,  int:0.75, max:7,  w:22};
     if (l<=6)  return {speed:320, sv:70,  int:0.62, max:9,  w:27};
@@ -92,11 +89,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (l<=22) return {speed:548, sv:94,  int:0.26, max:20, w:49};
     if (l<=24) return {speed:558, sv:95,  int:0.25, max:21, w:50};
     if (l<=26) return {speed:565, sv:96,  int:0.24, max:21, w:51};
-    // TECHO NIVEL 28 — difícil pero posible con práctica
     return           {speed:572, sv:97,  int:0.23, max:22, w:52};
   }
 
-  // Pinchos aparecen en nivel 12
   function getSpikeDepth(l) { return l < 12 ? 0 : 6; }
 
   function initState() {
@@ -162,11 +157,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const minX = sd+r+4, maxX = CW-sd-r-4;
     if (maxX <= minX) return;
     balls.push({
-      x: minX+Math.random()*(maxX-minX), y:-r, r,
+      x: minX+Math.random()*(maxX-minX), y:-r,
       vx: (Math.random()-0.5)*speed*0.4, vy: speed,
       color: BCOLS[Math.floor(Math.random()*BCOLS.length)],
       wobble: Math.random()*Math.PI*2,
-      wobbleAmp: cfg.w, wobbleSpeed: 1.5+Math.random()*2.5
+      wobbleAmp: cfg.w, wobbleSpeed: 1.5+Math.random()*2.5, r
     });
   }
 
@@ -574,20 +569,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   window._cerrarJuego=closeGame;
 
-  document.getElementById('game-btn')?.addEventListener('click',openGame);
-  document.getElementById('closeGame')?.addEventListener('click',closeGame);
-  document.getElementById('gameModal')?.addEventListener('click',e=>{ if(e.target.id==='gameModal') closeGame(); });
-
-  document.getElementById('ranking-juego-btn')?.addEventListener('click',()=>{
-    const m=document.getElementById('rankingJuegoModal');
-    if(m) m.style.display='flex';
-    if(window.cargarRankingJuego) window.cargarRankingJuego();
-  });
-  document.getElementById('closeRankingJuego')?.addEventListener('click',()=>{
-    const m=document.getElementById('rankingJuegoModal'); if(m) m.style.display='none';
-  });
-  document.getElementById('rankingJuegoModal')?.addEventListener('click',e=>{
-    if(e.target.id==='rankingJuegoModal') e.target.style.display='none';
+  /* ===== SOLO LOS LISTENERS DEL JUEGO — ranking lo maneja script.js ===== */
+  document.getElementById('game-btn')?.addEventListener('click', openGame);
+  document.getElementById('closeGame')?.addEventListener('click', closeGame);
+  document.getElementById('gameModal')?.addEventListener('click', e => {
+    if (e.target.id === 'gameModal') closeGame();
   });
 
 });
