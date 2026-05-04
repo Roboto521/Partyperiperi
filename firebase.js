@@ -109,8 +109,10 @@ window.inicializarStock = async function() {
     "Dulce cremoso"             : 30,
     "Ositos coloridos"          : 30,
     "Pelon pelo rico"           : 30,
-    "Pulparindo"                : 30
+    "Pulparindo"                : 30,
+    "Besitos"                   : 30
   };
+  
 
   const snap = await get(ref(db, "stock"));
   const stockActual = snap.val() || {};
