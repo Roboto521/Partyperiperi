@@ -111,6 +111,7 @@ window.inicializarStock = async function() {
     "Pelon pelo rico"           : 30,
     "Pulparindo"                : 30,
     "Besitos"                   : 30
+    "Bonbon"                   : 30
   };
   
 
