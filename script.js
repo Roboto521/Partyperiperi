@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", function () {
   /* ===== DATOS DE USUARIO ===== */
   const nombreInput = document.getElementById("cliente-nombre");
   const gradoInput  = document.getElementById("cliente-grado");
-  if (nombreInput) nombreInput.value = localStorage.getItem("userName") || "";
+  if (nombreInput) nombreInput.value = localStorage.getItem("userName")  || "";
   if (gradoInput)  gradoInput.value  = localStorage.getItem("userGrado") || "";
 
   setTimeout(() => {
@@ -54,9 +54,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   /* ===== CERRAR MODALES ===== */
   function cerrarTodosLosModales() {
-    ['rankingModal','rankingJuegoModal','gameModal','resultModal','modelosModal','secretariasModal'].forEach(id => {
+    ["rankingModal","rankingJuegoModal","gameModal","resultModal","modelosModal","secretariasModal"].forEach(id => {
       const m = document.getElementById(id);
-      if (m) m.style.display = 'none';
+      if (m) m.style.display = "none";
     });
     window._cerrarJuego?.();
   }
@@ -65,27 +65,6 @@ document.addEventListener("DOMContentLoaded", function () {
       if (e.target.id === id) e.target.style.display = "none";
     });
   }
-
-  /* ===== SLIDER — CORREGIDO ===== */
-  window.agregarDesdeSlider = function(name) {
-    // Busca el primer botón con ese nombre que NO esté deshabilitado ni sin stock
-    const btn = document.querySelector(`.add-to-cart[data-name="${name}"]:not(.sin-stock):not([disabled])`);
-    if (!btn) {
-      mostrarToast(`📦 "${name}" no está disponible en este momento`, "#9d6bff");
-      return;
-    }
-    // Dispara el evento agregarProducto directamente (mismo sistema que usa el carrito)
-    document.dispatchEvent(new CustomEvent('agregarProducto', {
-      detail: {
-        name  : btn.dataset.name,
-        price : btn.dataset.price,
-        img   : btn.dataset.img
-      }
-    }));
-    // Abre el dropdown del carrito
-    const dropdown = document.getElementById('cart-dropdown');
-    if (dropdown) dropdown.style.display = 'block';
-  };
 
   /* ===== TOAST ===== */
   function mostrarToast(msg, color = "#ff4d6d") {
@@ -102,8 +81,8 @@ document.addEventListener("DOMContentLoaded", function () {
       document.body.appendChild(toast);
     }
     toast.style.background = color;
-    toast.textContent = msg;
-    toast.style.bottom = "30px";
+    toast.textContent      = msg;
+    toast.style.bottom     = "30px";
     clearTimeout(toast._t);
     toast._t = setTimeout(() => { toast.style.bottom = "-100px"; }, 3000);
   }
@@ -141,17 +120,40 @@ document.addEventListener("DOMContentLoaded", function () {
     updateCart();
   }
 
-  document.querySelectorAll(".add-to-cart").forEach(btn => {
-    btn.addEventListener("click", () => {
-      if (btn.disabled) return;
-      agregarAlCarrito(btn.dataset.name, btn.dataset.price, btn.dataset.img);
+  /* ===== BIND BOTONES DE CARRITO =====
+     Se llama al inicio Y cada vez que firebase.js crea tarjetas nuevas
+     (por ejemplo en Más Vendidos). El flag _cartBound evita duplicar eventos. */
+  window._bindCartButtons = function () {
+    document.querySelectorAll(".add-to-cart").forEach(btn => {
+      if (btn._cartBound) return;
+      btn._cartBound = true;
+      btn.addEventListener("click", () => {
+        if (btn.disabled) return;
+        agregarAlCarrito(btn.dataset.name, btn.dataset.price, btn.dataset.img);
+      });
     });
-  });
+  };
 
-  // Escucha el evento global (usado por agregarDesdeSlider y otros)
-  document.addEventListener('agregarProducto', e => {
+  // Bind inicial para los botones que ya están en el HTML
+  window._bindCartButtons();
+
+  // Escucha el evento global (usado por agregarDesdeSlider)
+  document.addEventListener("agregarProducto", e => {
     agregarAlCarrito(e.detail.name, e.detail.price, e.detail.img);
   });
+
+  /* ===== SLIDER ===== */
+  window.agregarDesdeSlider = function (name) {
+    const btn = document.querySelector(`.add-to-cart[data-name="${name}"]:not(.sin-stock):not([disabled])`);
+    if (!btn) {
+      mostrarToast(`📦 "${name}" no está disponible en este momento`, "#9d6bff");
+      return;
+    }
+    document.dispatchEvent(new CustomEvent("agregarProducto", {
+      detail: { name: btn.dataset.name, price: btn.dataset.price, img: btn.dataset.img }
+    }));
+    if (cartDropdown) cartDropdown.style.display = "block";
+  };
 
   /* ===== RENDER CARRITO ===== */
   function updateCart() {
@@ -234,6 +236,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const grado  = localStorage.getItem("userGrado") || "No indicado";
     const uid    = localStorage.getItem("userUID")   || "";
     const total  = parseFloat(cartTotal.textContent);
+    const puntos = Math.floor(total);
 
     const errores = await window.descontarStock?.(cart) || [];
     if (errores.length > 0) {
@@ -243,17 +246,31 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    window.guardarPedido?.({ uid, nombre, grado, items:[...cart], total, puntos:Math.floor(total), fecha:new Date().toLocaleString("es-GT") });
+    // Guarda el pedido en Firebase
+    window.guardarPedido?.({
+      uid, nombre, grado,
+      items : [...cart],
+      total,
+      puntos,
+      fecha : new Date().toLocaleString("es-GT")
+    });
 
+    // ✅ Suma puntos al usuario (1 punto por cada Q1)
+    if (uid) window.sumarPuntos?.(uid, puntos);
+
+    // Arma el mensaje de WhatsApp
     let mensaje = `🍬 Pedido Party Perilingües 🍬\n\n👤 Nombre: ${nombre}\n🎓 Grado/Carrera: ${grado}\n\n`;
-    cart.forEach(item => { mensaje += `• ${item.name} x${item.quantity} — Q${(item.price * item.quantity).toFixed(2)}\n`; });
+    cart.forEach(item => {
+      mensaje += `• ${item.name} x${item.quantity} — Q${(item.price * item.quantity).toFixed(2)}\n`;
+    });
     mensaje += `\n💰 Total: Q${total.toFixed(2)}`;
 
-    cart = []; updateCart();
+    cart = [];
+    updateCart();
     window.location.href = `https://wa.me/50239411839?text=${encodeURIComponent(mensaje)}`;
   });
 
-  /* ===== RESTO DE MODALES ===== */
+  /* ===== MODALES ===== */
   document.getElementById("closeResult")?.addEventListener("click", () => {
     document.getElementById("resultModal").style.display = "none";
   });
@@ -301,14 +318,7 @@ document.addEventListener("DOMContentLoaded", function () {
     "musica/Animal Crossing - Bubblegum K.K. [Remix].mp3",
     "musica/Kirby's Return to Dream Land  Adventure Wii - Menu.mp3"
   ];
-
-  const volumenes = [
-    0.15,
-    1.0,
-    0.50,
-    0.50,
-    0.50,
-  ];
+  const volumenes = [0.15, 1.0, 0.50, 0.50, 0.50];
 
   let trackActual    = parseInt(localStorage.getItem("musicTrack")) || 0;
   let tiempoGuardado = parseFloat(localStorage.getItem("musicTiempo")) || 0;
@@ -317,9 +327,9 @@ document.addEventListener("DOMContentLoaded", function () {
   let cambiando = false;
 
   function cargarCancion(index, desde = 0) {
-    cambiando = true;
-    music.src    = playlist[index];
-    music.volume = volumenes[index];
+    cambiando      = true;
+    music.src      = playlist[index];
+    music.volume   = volumenes[index];
     music.load();
     music.oncanplay = () => {
       music.oncanplay = null;
@@ -334,23 +344,13 @@ document.addEventListener("DOMContentLoaded", function () {
     localStorage.setItem("musicTiempo", music.currentTime);
   });
 
+  // Avanza a la siguiente canción al terminar (un solo manejador, sin setInterval duplicado)
   music.addEventListener("ended", () => {
     trackActual = (trackActual + 1) % playlist.length;
     localStorage.setItem("musicTrack",  trackActual);
     localStorage.setItem("musicTiempo", 0);
     cargarCancion(trackActual, 0);
   });
-
-  setInterval(() => {
-    if (!music.paused && !music.muted && !cambiando && music.duration > 0) {
-      if (music.currentTime >= music.duration - 0.5) {
-        trackActual = (trackActual + 1) % playlist.length;
-        localStorage.setItem("musicTrack",  trackActual);
-        localStorage.setItem("musicTiempo", 0);
-        cargarCancion(trackActual, 0);
-      }
-    }
-  }, 1000);
 
   if (music && musicBtn) {
     musicBtn.classList.add("muted");
@@ -393,46 +393,58 @@ document.addEventListener("DOMContentLoaded", function () {
     try {
       const { getAuth, signOut } = await import("https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js");
       await signOut(getAuth());
-    } catch(e) { console.error("Error al cerrar sesión:", e); }
+    } catch (e) {
+      console.error("Error al cerrar sesión:", e);
+    }
     localStorage.clear();
     window.location.href = "index.html";
   });
 
 });
 
-// ===== CARRUSEL PUBLICISTAS =====
-(function(){
-  const track    = document.getElementById('pubTrack');
-  if(!track) return;
-  const dotsWrap = document.getElementById('pubDots');
-  const counter  = document.getElementById('pubCounter');
-  const modalBox = document.querySelector('#modelosModal .modal-publicistas-box');
-  const slides   = track.querySelectorAll('.pub-slide');
-  let cur = 0;
+/* ===== CARRUSEL PUBLICISTAS ===== */
+(function () {
+  // Espera a que el DOM esté listo antes de inicializar el carrusel
+  function initCarrusel() {
+    const track = document.getElementById("pubTrack");
+    if (!track) return;
 
-  const colores = [
-    'linear-gradient(110deg,#E01B1B,#E01B1B,#fff0f8)',
-    'linear-gradient(110deg,#56CFFC,#56CFFC,#fff0f8)',
-    'linear-gradient(110deg,#128C03,#128C03,#fff0f8)',
-    'linear-gradient(110deg,#EA87ED,#EA87ED,#fff0f8)',
-  ];
+    const dotsWrap = document.getElementById("pubDots");
+    const counter  = document.getElementById("pubCounter");
+    const modalBox = document.querySelector("#modelosModal .modal-publicistas-box");
+    const slides   = track.querySelectorAll(".pub-slide");
+    let cur = 0;
 
-  slides.forEach((_,i) => {
-    const d = document.createElement('div');
-    d.className = 'pub-dot' + (i===0?' active':'');
-    d.onclick = () => go(i);
-    dotsWrap.appendChild(d);
-  });
+    const colores = [
+      "linear-gradient(110deg,#E01B1B,#E01B1B,#fff0f8)",
+      "linear-gradient(110deg,#56CFFC,#56CFFC,#fff0f8)",
+      "linear-gradient(110deg,#128C03,#128C03,#fff0f8)",
+      "linear-gradient(110deg,#EA87ED,#EA87ED,#fff0f8)",
+    ];
 
-  function go(n){
-    cur = (n + slides.length) % slides.length;
-    track.style.transform = `translateX(-${cur*100}%)`;
-    dotsWrap.querySelectorAll('.pub-dot').forEach((d,i) => d.classList.toggle('active', i===cur));
-    counter.textContent = `${cur+1} / ${slides.length}`;
-    if(modalBox && colores[cur]) modalBox.style.background = colores[cur];
+    slides.forEach((_, i) => {
+      const d     = document.createElement("div");
+      d.className = "pub-dot" + (i === 0 ? " active" : "");
+      d.onclick   = () => go(i);
+      dotsWrap.appendChild(d);
+    });
+
+    function go(n) {
+      cur = (n + slides.length) % slides.length;
+      track.style.transform = `translateX(-${cur * 100}%)`;
+      dotsWrap.querySelectorAll(".pub-dot").forEach((d, i) => d.classList.toggle("active", i === cur));
+      counter.textContent = `${cur + 1} / ${slides.length}`;
+      if (modalBox && colores[cur]) modalBox.style.background = colores[cur];
+    }
+
+    document.getElementById("pubNext").onclick = () => go(cur + 1);
+    document.getElementById("pubPrev").onclick = () => go(cur - 1);
+    if (modalBox && colores[0]) modalBox.style.background = colores[0];
   }
 
-  document.getElementById('pubNext').onclick = () => go(cur+1);
-  document.getElementById('pubPrev').onclick = () => go(cur-1);
-  if(modalBox && colores[0]) modalBox.style.background = colores[0];
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initCarrusel);
+  } else {
+    initCarrusel();
+  }
 })();
