@@ -22,6 +22,82 @@ onValue(ref(db, "config/mantenimiento"), (snap) => {
   if (!enMantenimiento && enPaginaMant) window.location.href = "index.html";
 });
 
+/* ===== REORDENAR TARJETAS POR STOCK ===== */
+// Solo reordena pestañas normales — Más Vendidos mantiene su orden por ventas
+function reordenarProductosPorStock(stockData) {
+  document.querySelectorAll(".tab-content:not(#masvendidos)").forEach(grid => {
+    const cards = Array.from(grid.querySelectorAll(".product"));
+    if (cards.length === 0) return;
+
+    cards.sort((a, b) => {
+      const btnA = a.querySelector(".add-to-cart");
+      const btnB = b.querySelector(".add-to-cart");
+
+      const fijoA = !btnA || btnA.classList.contains("sin-stock-fijo");
+      const fijoB = !btnB || btnB.classList.contains("sin-stock-fijo");
+      if (fijoA && !fijoB) return 1;
+      if (!fijoA && fijoB) return -1;
+      if (fijoA && fijoB)  return 0;
+
+      const nombreA = btnA.dataset.name;
+      const nombreB = btnB.dataset.name;
+      const stockA  = nombreA ? (stockData[nombreA] ?? -1) : -1;
+      const stockB  = nombreB ? (stockData[nombreB] ?? -1) : -1;
+      const tieneA  = stockA > 0 ? 1 : 0;
+      const tieneB  = stockB > 0 ? 1 : 0;
+
+      if (tieneA !== tieneB) return tieneB - tieneA;
+      if (tieneA && tieneB) return stockB - stockA;
+      return 0;
+    });
+
+    cards.forEach(card => grid.appendChild(card));
+  });
+}
+
+/* ===== ACTUALIZAR BOTÓN DE STOCK ===== */
+// Función reutilizable para actualizar el estado visual de cualquier botón
+function actualizarBotonStock(btn, cantidad) {
+  if (cantidad !== undefined && cantidad <= 0) {
+    btn.disabled    = true;
+    btn.textContent = "Sin Stock ❌";
+    btn.classList.add("sin-stock");
+
+    const card = btn.closest(".product");
+    card?.querySelector(".stock-bajo-label")?.remove();
+    if (card && !card.querySelector(".badge-sin-stock-dinamico")) {
+      const badge       = document.createElement("div");
+      badge.className   = "badge-sin-stock badge-sin-stock-dinamico";
+      badge.textContent = "📦 Sin Stock";
+      card.appendChild(badge);
+    }
+  } else {
+    btn.disabled    = false;
+    btn.textContent = "Agregar 🛒";
+    btn.classList.remove("sin-stock");
+
+    const card = btn.closest(".product");
+    card?.querySelector(".badge-sin-stock-dinamico")?.remove();
+
+    if (cantidad !== undefined && cantidad <= 5 && cantidad > 0) {
+      let label = card?.querySelector(".stock-bajo-label");
+      if (!label) {
+        label           = document.createElement("div");
+        label.className = "stock-bajo-label";
+        btn.insertAdjacentElement("beforebegin", label);
+      }
+      label.textContent = `⚠️ ¡Solo quedan ${cantidad}!`;
+    } else {
+      card?.querySelector(".stock-bajo-label")?.remove();
+    }
+
+    // Registra el evento del carrito si aún no lo tiene
+    if (typeof window._bindCartButtons === "function") {
+      window._bindCartButtons();
+    }
+  }
+}
+
 /* ===== STOCK EN TIEMPO REAL ===== */
 const MAX_POR_COMPRA = 10;
 
@@ -29,49 +105,24 @@ onValue(ref(db, "stock"), (snap) => {
   const stockData = snap.val() || {};
   window._stockActual = stockData;
 
-  /* — Botones normales de productos — */
-  document.querySelectorAll(".add-to-cart:not(.sin-stock-fijo)").forEach(btn => {
-    const nombre   = btn.dataset.name;
+  /* — Botones de pestañas normales (excluye Más Vendidos) — */
+  document.querySelectorAll(".tab-content:not(#masvendidos) .add-to-cart:not(.sin-stock-fijo)").forEach(btn => {
+    const nombre = btn.dataset.name;
     if (!nombre) return;
-    const cantidad = stockData[nombre];
-
-    if (cantidad !== undefined && cantidad <= 0) {
-      btn.disabled = true;
-      btn.textContent = "Sin Stock ❌";
-      btn.classList.add("sin-stock");
-
-      const card = btn.closest(".product");
-      card?.querySelector(".stock-bajo-label")?.remove();
-      if (card && !card.querySelector(".badge-sin-stock-dinamico")) {
-        const badge = document.createElement("div");
-        badge.className = "badge-sin-stock badge-sin-stock-dinamico";
-        badge.textContent = "📦 Sin Stock";
-        card.appendChild(badge);
-      }
-
-    } else {
-      btn.disabled = false;
-      btn.textContent = "Agregar 🛒";
-      btn.classList.remove("sin-stock");
-
-      const card = btn.closest(".product");
-      card?.querySelector(".badge-sin-stock-dinamico")?.remove();
-
-      if (cantidad !== undefined && cantidad <= 5 && cantidad > 0) {
-        let stockLabel = card?.querySelector(".stock-bajo-label");
-        if (!stockLabel) {
-          stockLabel = document.createElement("div");
-          stockLabel.className = "stock-bajo-label";
-          btn.insertAdjacentElement("beforebegin", stockLabel);
-        }
-        stockLabel.textContent = `⚠️ ¡Solo quedan ${cantidad}!`;
-      } else {
-        card?.querySelector(".stock-bajo-label")?.remove();
-      }
-    }
+    actualizarBotonStock(btn, stockData[nombre]);
   });
 
-  /* — Botones del SLIDER — se ponen grises si el producto tiene 0 stock — */
+  /* — Botones de MÁS VENDIDOS en tiempo real — */
+  const contenedorMV = document.getElementById("masvendidos");
+  if (contenedorMV && contenedorMV.querySelector(".product")) {
+    contenedorMV.querySelectorAll(".add-to-cart:not(.sin-stock-fijo)").forEach(btn => {
+      const nombre = btn.dataset.name;
+      if (!nombre) return;
+      actualizarBotonStock(btn, stockData[nombre]);
+    });
+  }
+
+  /* — Botones del SLIDER — */
   document.querySelectorAll(".btn-1[onclick*='agregarDesdeSlider']").forEach(btn => {
     const match = btn.getAttribute("onclick").match(/agregarDesdeSlider\('(.+?)'\)/);
     if (!match) return;
@@ -94,10 +145,13 @@ onValue(ref(db, "stock"), (snap) => {
     }
   });
 
+  /* — Reordena pestañas normales por stock — */
+  reordenarProductosPorStock(stockData);
 });
 
 /* ===== INICIALIZAR STOCK ===== */
-window.inicializarStock = async function() {
+// Solo agrega productos nuevos; usa sessionStorage para no repetir la lectura
+window.inicializarStock = async function () {
   const todosLosProductos = {
     "Ositos"                    : 30,
     "Gusanos"                   : 30,
@@ -112,31 +166,36 @@ window.inicializarStock = async function() {
     "Pulparindo"                : 30,
     "Besitos"                   : 30,
     "Chicles"                   : 30,
-    "Bonbon"                    : 30
+    "Bonbon"                    : 30,
+    "Sandias Acidas"            : 30,
+    "Pulparindo de sandia"      : 30
   };
 
-  const snap = await get(ref(db, "stock"));
-  const stockActual = snap.val() || {};
+  if (sessionStorage.getItem("stockInicializado")) return;
 
-  // Solo agrega los que NO existen todavía, sin tocar los demás
-  const nuevos = {};
-  for (const [nombre, cantidad] of Object.entries(todosLosProductos)) {
-    if (stockActual[nombre] === undefined) {
-      nuevos[nombre] = cantidad;
+  try {
+    const snap        = await get(ref(db, "stock"));
+    const stockActual = snap.val() || {};
+    const nuevos      = {};
+
+    for (const [nombre, cantidad] of Object.entries(todosLosProductos)) {
+      if (stockActual[nombre] === undefined) nuevos[nombre] = cantidad;
     }
-  }
 
-  if (Object.keys(nuevos).length > 0) {
-    await update(ref(db, "stock"), nuevos);
-    console.log("✅ Productos nuevos agregados al stock:", nuevos);
-  } else {
-    console.log("✅ Stock ya estaba completo");
+    if (Object.keys(nuevos).length > 0) {
+      await update(ref(db, "stock"), nuevos);
+      console.log("✅ Productos nuevos agregados al stock:", nuevos);
+    }
+
+    sessionStorage.setItem("stockInicializado", "1");
+  } catch (e) {
+    console.error("Error inicializando stock:", e);
   }
 };
 window.inicializarStock();
 
 /* ===== DESCONTAR STOCK AL COMPRAR ===== */
-window.descontarStock = async function(items) {
+window.descontarStock = async function (items) {
   const errores = [];
   for (const item of items) {
     const nombre   = item.name;
@@ -149,7 +208,7 @@ window.descontarStock = async function(items) {
         return stockActual - cantidad;
       });
       if (!result.committed) errores.push(nombre);
-    } catch(e) {
+    } catch (e) {
       console.error("Error descontando stock de " + nombre, e);
       errores.push(nombre);
     }
@@ -158,8 +217,8 @@ window.descontarStock = async function(items) {
 };
 
 /* ===== VALIDAR CARRITO CONTRA STOCK ===== */
-window.validarCarritoContraStock = function(cart) {
-  const stock = window._stockActual || {};
+window.validarCarritoContraStock = function (cart) {
+  const stock     = window._stockActual || {};
   const problemas = [];
   for (const item of cart) {
     const nombre = item.name;
@@ -261,10 +320,10 @@ function avatarHTML(nombre, foto) {
 const MEDALLAS = ["🥇","🥈","🥉"];
 
 function buildRow(u, i, uidActual, icono, nivel, campo) {
-  const esYo    = u.uid === uidActual;
-  const esTop3  = i < 3;
-  const med     = esTop3 ? MEDALLAS[i] : `#${i + 1}`;
-  const pts     = u[campo];
+  const esYo   = u.uid === uidActual;
+  const esTop3 = i < 3;
+  const med    = esTop3 ? MEDALLAS[i] : `#${i + 1}`;
+  const pts    = u[campo];
 
   const claseTop = esTop3
     ? (campo === "puntos" ? "ranking-top3-compras" : "ranking-top3-juego")
@@ -294,10 +353,10 @@ function renderRanking({ lista, tablaEl, verMasBtnId, uidActual, icono, calcNive
   const btn = document.getElementById(verMasBtnId);
 
   if (resto.length > 0) {
-    const restoDiv = document.createElement("div");
-    restoDiv.className = "ranking-resto-inner";
+    const restoDiv         = document.createElement("div");
+    restoDiv.className     = "ranking-resto-inner";
     restoDiv.style.display = "none";
-    restoDiv.innerHTML = resto.map((u, i) =>
+    restoDiv.innerHTML     = resto.map((u, i) =>
       buildRow(u, i + 10, uidActual, icono, calcNivel(u[campo]), campo)
     ).join("");
     tablaEl.appendChild(restoDiv);
@@ -328,7 +387,10 @@ window.cargarPuntosUsuario = function () {
 
 window.mostrarPuntosUsuario = function (datos) {
   const badge = document.getElementById("puntos-badge");
-  if (badge) { badge.innerHTML = `⭐ ${datos.puntos || 0} pts`; badge.style.display = "flex"; }
+  if (badge) {
+    badge.innerHTML     = `⭐ ${datos.puntos || 0} pts`;
+    badge.style.display = "flex";
+  }
 };
 
 /* ===== PEDIDOS ===== */
@@ -339,9 +401,13 @@ window.guardarPedido = function (pedido) {
 
 /* ===== PUNTOS COMPRAS ===== */
 window.sumarPuntos = function (uid, puntosExtra) {
+  if (!uid || puntosExtra <= 0) return;
   get(ref(db, "usuarios/" + uid)).then(snap => {
-    if (snap.exists() && snap.val() && typeof snap.val() === 'object') {
-      update(ref(db, "usuarios/" + uid), { puntos: (snap.val().puntos || 0) + puntosExtra });
+    if (snap.exists() && snap.val() && typeof snap.val() === "object") {
+      const nuevos = (snap.val().puntos || 0) + puntosExtra;
+      update(ref(db, "usuarios/" + uid), { puntos: nuevos }).then(() => {
+        window.mostrarPuntosUsuario({ ...snap.val(), puntos: nuevos });
+      });
     }
   });
 };
@@ -352,10 +418,13 @@ window._subirPuntosJuego = async function (pts) {
   if (!uid) return;
   try {
     const snap = await get(ref(db, "usuarios/" + uid));
-    if (snap.exists() && snap.val() && typeof snap.val() === 'object' && pts > (snap.val().puntosJuego || 0)) {
+    if (snap.exists() && snap.val() && typeof snap.val() === "object"
+        && pts > (snap.val().puntosJuego || 0)) {
       await update(ref(db, "usuarios/" + uid), { puntosJuego: pts });
     }
-  } catch (e) { console.error("Error guardando puntos juego:", e); }
+  } catch (e) {
+    console.error("Error guardando puntos juego:", e);
+  }
 };
 
 /* ===== RANKING COMPRAS ===== */
@@ -370,7 +439,7 @@ window.cargarRanking = function () {
     }
     const uidActual = localStorage.getItem("userUID") || "";
     const lista = Object.entries(snap.val())
-      .filter(([uid, d]) => d && typeof d === 'object')
+      .filter(([, d]) => d && typeof d === "object")
       .map(([uid, d]) => ({
         uid,
         nombre  : d.nombre  || "Anónimo",
@@ -396,7 +465,7 @@ window.cargarRankingJuego = function () {
     }
     const uidActual = localStorage.getItem("userUID") || "";
     const lista = Object.entries(snap.val())
-      .filter(([uid, d]) => d && typeof d === 'object')
+      .filter(([, d]) => d && typeof d === "object")
       .map(([uid, d]) => ({
         uid,
         nombre      : d.nombre      || "Anónimo",
@@ -417,11 +486,100 @@ window.cargarRankingJuego = function () {
   });
 };
 
+/* ===== MÁS VENDIDOS AUTOMÁTICO ===== */
+const PRODUCTOS_INFO = {
+  "Ositos"                    : { img:"images/azucar.png",                   desc:"El favorito de todos 🍬",                    precio:"Q1",    precioVal:1    },
+  "Gusanos"                   : { img:"images/image-removebg-preview.png",   desc:"Sabor ácido que despierta tus sentidos",     precio:"Q1",    precioVal:1    },
+  "Aros"                      : { img:"images/aros.png",                     desc:"Refrescante sabor a melocoton",               precio:"Q1",    precioVal:1    },
+  "Besitos"                   : { img:"images/besitos .png",                 desc:"Gomitas de besitos para azucarar tu dia",    precio:"Q1",    precioVal:1    },
+  "Ositos coloridos"          : { img:"images/osxs.png",                     desc:"Ositos para alegrar tu dia",                  precio:"Q1",    precioVal:1    },
+  "Regaliz de frambuesa"      : { img:"images/regaliz fra.png",              desc:"Refrescante sabor a frambuesa",               precio:"Q1",    precioVal:1    },
+  "Tiras Ácidas de frambuesa" : { img:"images/franses .png",                 desc:"Todos los sabores en una sola gomita",        precio:"Q1",    precioVal:1    },
+  "Gomitas Preparadas bolsita": { img:"images/ewas.png",                     desc:"Mezcla especial con chamoy y mas",            precio:"Q3",    precioVal:3    },
+  "Sandias Acidas"            : { img:"images/azul.png",                     desc:"Gomitas de sandía Acidas",                    precio:"Q1",    precioVal:1    },
+  "Cachetadas"                : { img:"images/lengua.png",                   desc:"Arma tu propia paleta!",                      precio:"Q1",    precioVal:1    },
+  "Dulce cremoso"             : { img:"images/dulduldul.png",                desc:"Suave y dulce, sabor clásico",                precio:"Q1",    precioVal:1    },
+  "Pelon pelo rico"           : { img:"images/pelusa.png",                   desc:"Pasta de tamarindo picante. ¡Adictivo! 🌶️",  precio:"Q3",    precioVal:3    },
+  "Pulparindo"                : { img:"images/pelo.png",                     desc:"Tamarindo con chile, dulce y picante 🌶️",    precio:"Q2.50", precioVal:2.50 },
+  "Pulparindo de sandia"      : { img:"images/pulsan.png",                   desc:"Tamarindo con sandía, dulce y picante 🍉",   precio:"Q2.50", precioVal:2.50 },
+  "Chicles"                   : { img:"images/rana.png",                     desc:"Chicles de sabores variados y refrescantes",  precio:"Q1",    precioVal:1    },
+  "Bonbon"                    : { img:"images/barry.png",                    desc:"Bonbon sabor a barrilete",                    precio:"Q1",    precioVal:1    },
+};
+
+const MEDALLAS_TOP = ["🥇","🥈","🥉"];
+
+window.cargarMasVendidos = function () {
+  const contenedor = document.getElementById("masvendidos");
+  if (!contenedor) return;
+
+  get(ref(db, "pedidos")).then(snap => {
+    const loading = document.getElementById("masvendidos-loading");
+
+    if (!snap.exists()) {
+      if (loading) loading.textContent = "Aún no hay ventas registradas 🍬";
+      return;
+    }
+
+    const ventas = {};
+    snap.forEach(pedidoSnap => {
+      const pedido = pedidoSnap.val();
+      if (!pedido || pedido.estado === "rechazado" || !pedido.items) return;
+      const items = Array.isArray(pedido.items)
+        ? pedido.items
+        : Object.values(pedido.items);
+      items.forEach(item => {
+        if (!item?.name) return;
+        ventas[item.name] = (ventas[item.name] || 0) + (item.quantity || 1);
+      });
+    });
+
+    const ranking = Object.entries(ventas)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
+
+    if (ranking.length === 0) {
+      if (loading) loading.textContent = "Aún no hay ventas registradas 🍬";
+      return;
+    }
+
+    contenedor.innerHTML = "";
+    const stockActual = window._stockActual || {};
+
+    ranking.forEach(([nombre, totalVendido], i) => {
+      const info = PRODUCTOS_INFO[nombre];
+      if (!info) return;
+
+      const badgeTexto = i < 3 ? `${MEDALLAS_TOP[i]} #${i + 1}` : "⭐ Top";
+      const sinStock   = stockActual[nombre] !== undefined && stockActual[nombre] <= 0;
+
+      const card     = document.createElement("div");
+      card.className = "product cat-top";
+      card.innerHTML = `
+        <div class="product-badge top-badge">${badgeTexto}</div>
+        <img src="${info.img}" alt="${nombre}">
+        <h4>${nombre}</h4>
+        <p class="prod-desc">${info.desc}</p>
+        <span>${info.precio}</span>
+        ${sinStock
+          ? `<button class="add-to-cart sin-stock" disabled>Sin Stock ❌</button>`
+          : `<button class="add-to-cart" data-name="${nombre}" data-price="${info.precioVal}" data-img="${info.img}">Agregar 🛒</button>`
+        }
+      `;
+      contenedor.appendChild(card);
+    });
+
+    // Adjunta eventos del carrito a los botones recién creados
+    if (typeof window._bindCartButtons === "function") {
+      window._bindCartButtons();
+    }
+  }).catch(e => console.error("Error cargando más vendidos:", e));
+};
+
 /* ===== TICKER ===== */
 window.cargarTicker = function () {
   get(ref(db, "usuarios")).then(snap => {
     if (!snap.exists()) return;
-    const usuarios = Object.values(snap.val()).filter(u => u && typeof u === 'object');
+    const usuarios = Object.values(snap.val()).filter(u => u && typeof u === "object");
 
     function iniciarTicker(elementId, prefijo, lista, campo) {
       const el = document.getElementById(elementId);
@@ -433,15 +591,23 @@ window.cargarTicker = function () {
       let idx = 0;
       function rotar() {
         el.style.opacity = "0";
-        setTimeout(() => { el.textContent = prefijo + " " + items[idx]; el.style.opacity = "1"; idx = (idx + 1) % items.length; }, 400);
+        setTimeout(() => {
+          el.textContent   = prefijo + " " + items[idx];
+          el.style.opacity = "1";
+          idx = (idx + 1) % items.length;
+        }, 400);
       }
       rotar();
       setInterval(rotar, 3000);
     }
 
     iniciarTicker("ticker-contenido", "🏆",
-      usuarios.filter(u => (u.puntos || 0) > 0).sort((a,b) => b.puntos - a.puntos).slice(0, 3), "puntos");
+      usuarios.filter(u => (u.puntos || 0) > 0).sort((a, b) => b.puntos - a.puntos).slice(0, 3), "puntos");
     iniciarTicker("ticker-juego-contenido", "🎮",
-      usuarios.filter(u => (u.puntosJuego || 0) > 0).sort((a,b) => b.puntosJuego - a.puntosJuego).slice(0, 3), "puntosJuego");
+      usuarios.filter(u => (u.puntosJuego || 0) > 0).sort((a, b) => b.puntosJuego - a.puntosJuego).slice(0, 3), "puntosJuego");
   });
 };
+
+/* ===== LLAMADA INICIAL MÁS VENDIDOS ===== */
+// Una sola vez aquí. No llamar desde script.js.
+window.cargarMasVendidos();
