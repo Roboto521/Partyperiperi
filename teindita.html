@@ -36,7 +36,7 @@
               <p>Pequeñas, suaves y llenas de sabor.</p>
               <a href="#" class="btn-1" onclick="agregarDesdeSlider('Ositos');return false;">Comprar</a>
             </div>
-            <div class="slider-img"><img src="images/osos.png"></div>
+            <div class="slider-img"><img src="images/azucar.png"></div>
           </div>
         </div>
 
@@ -84,51 +84,17 @@
 
   <!-- ===== MÁS VENDIDOS ===== -->
   <div class="products tab-content" id="masvendidos">
-    <div class="product cat-top">
-      <div class="product-badge top-badge">🥇 #1</div>
-      <img src="images/osos.png"><h4>Ositos</h4>
-      <p class="prod-desc">El favorito de todos 🍬</p>
-      <span>Q1 <small style="color:#aaa;font-size:0.7rem">(x2 unidades)</small></span>
-      <button class="add-to-cart" data-name="Ositos" data-price="1" data-img="images/osos.png">Agregar 🛒</button>
-    </div>
-    <div class="product cat-top">
-      <div class="product-badge top-badge">🥈 #2</div>
-      <img src="images/image-removebg-preview.png"><h4>Gusanos Ácidos</h4>
-      <p class="prod-desc">Sabor ácido que despierta tus sentidos</p>
-      <span>Q1 <small style="color:#aaa;font-size:0.7rem">(x2 unidades)</small></span>
-      <button class="add-to-cart" data-name="Gusanos" data-price="1" data-img="images/image-removebg-preview.png">Agregar 🛒</button>
-    </div>
-    <div class="product cat-top">
-      <div class="product-badge top-badge">🥉 #3</div>
-      <img src="images/lengua.png"><h4>Cachetadas</h4>
-      <p class="prod-desc">Arma tu propia paleta¡</p>
-      <span>Q1 <small style="color:#aaa;font-size:0.7rem">(x1 unidades)</small></span>
-      <button class="add-to-cart" data-name="Cachetadas" data-price="1" data-img="images/lengua.png">Agregar 🛒</button>
-    </div>
-    <div class="product cat-top">
-      <div class="product-badge top-badge">⭐ Top</div>
-      <img src="images/pelusa.png"><h4>Pelon Pelo Rico</h4>
-      <p class="prod-desc">Pasta de tamarindo picante. ¡Adictivo! 🌶️</p>
-      <span>Q3</span>
-      <button class="add-to-cart" data-name="Pelon pelo rico" data-price="3" data-img="images/pelusa.png">Agregar 🛒</button>
-    </div>
-    <div class="product cat-top">
-      <div class="product-badge top-badge">⭐ Top</div>
-      <img src="images/pelo.png"><h4>Pulparindo</h4>
-      <p class="prod-desc"> Tamarindo con chile, dulce y picante. ¡Irresistible!</p>
-      <span>Q2.50</span>
-      <button class="add-to-cart" data-name="Pulparindo" data-price="2.50" data-img="images/pelo.png">Agregar 🛒</button>
-    </div>
+    <p id="masvendidos-loading" style="text-align:center;color:#aaa;width:100%;grid-column:1/-1;padding:20px;">🔄 Cargando ranking...</p>
   </div>
 
   <!-- ===== GOMITAS ===== -->
   <div class="products tab-content active" id="gomitas">
     <div class="product cat-gomitas">
       <div class="product-badge">⭐ Popular</div>
-      <img src="images/osos.png"><h4>Ositos</h4>
-      <p class="prod-desc">Suaves y coloridos, sabor a fruta</p>
+      <img src="images/azucar.png"><h4>Ositos</h4>
+      <p class="prod-desc">Suaves y coloridos, sabor a fruta con azucar</p>
       <span>Q1 <small style="color:#aaa;font-size:0.7rem">(x2 unidades)</small></span>
-      <button class="add-to-cart" data-name="Ositos" data-price="1" data-img="images/osos.png">Agregar 🛒</button>
+      <button class="add-to-cart" data-name="Ositos" data-price="1" data-img="images/azucar.png">Agregar 🛒</button>
     </div>
     <div class="product cat-gomitas">
       <img src="images/aros.png"><h4>Aros</h4>
@@ -136,7 +102,7 @@
       <span>Q1 <small style="color:#aaa;font-size:0.7rem">(x1 unidades)</small></span>
       <button class="add-to-cart" data-name="Aros" data-price="1" data-img="images/aros.png">Agregar 🛒</button>
     </div>
-     <div class="product cat-gomitas">
+    <div class="product cat-gomitas">
       <img src="images/besitos .png"><h4>Besitos</h4>
       <p class="prod-desc">Gomitas de besitos para azucarar tu dia</p>
       <span>Q1 <small style="color:#aaa;font-size:0.7rem">(x2 unidades)</small></span>
@@ -174,6 +140,15 @@
       <span>Q3</span>
       <button class="add-to-cart" data-name="Gomitas Preparadas bolsita" data-price="3" data-img="images/ewas.png">Agregar 🛒</button>
     </div>
+
+    <!-- ===== SANDIAS ACIDAS ===== -->
+    <div class="product cat-gomitas">
+      <img src="images/azul.png"><h4>Sandias Acidas</h4>
+      <p class="prod-desc">Gomitas de sandía Acidas</p>
+      <span>Q1 <small style="color:#aaa;font-size:0.7rem">(x2 unidades)</small></span>
+      <button class="add-to-cart" data-name="Sandias Acidas" data-price="1" data-img="images/azul.png">Agregar 🛒</button>
+    </div>
+
     <div class="product cat-gomitas">
       <div class="product-badge new-badge">🔥 Nuevo</div>
       <div class="badge-sin-stock">📦 Sin Stock</div>
@@ -209,7 +184,15 @@
       <button class="add-to-cart" data-name="Pulparindo" data-price="2.50" data-img="images/pelo.png">Agregar 🛒</button>
     </div>
 
-    <!-- ✅ CHICLES — antes "Paleta", ahora controlado por Firebase -->
+    <!-- ===== NUEVA: PULPARINDO DE SANDIA ===== -->
+    <div class="product cat-dulces">
+      <div class="product-badge new-badge">🍉 Nuevo</div>
+      <img src="images/pulsan.png"><h4>Pulparindo de Sandia</h4>
+      <p class="prod-desc">Tamarindo con sandía, dulce y picante. ¡Refrescante! 🍉</p>
+      <span>Q2.50</span>
+      <button class="add-to-cart" data-name="Pulparindo de sandia" data-price="2.50" data-img="images/pulsan.png">Agregar 🛒</button>
+    </div>
+
     <div class="product cat-dulces">
       <img src="images/rana.png"><h4>Chicles</h4>
       <p class="prod-desc">Chicles de sabores variados y refrescantes</p>
@@ -217,14 +200,12 @@
       <button class="add-to-cart" data-name="Chicles" data-price="1" data-img="images/rana.png">Agregar 🛒</button>
     </div>
 
-    <!-- ✅ BONBON — ahora controlado por Firebase -->
     <div class="product cat-dulces">
       <img src="images/barry.png"><h4>Bonbon Barrilete</h4>
       <p class="prod-desc">Bonbon Sabor a barrrielte</p>
       <span>Q1</span>
       <button class="add-to-cart" data-name="Bonbon" data-price="1" data-img="images/barry.png">Agregar 🛒</button>
     </div>
-
   </div>
 
   <!-- ===== CHOCOLATES ===== -->
@@ -502,7 +483,7 @@
 </audio>
 
 <script src="https://cdn.jsdelivr.net/npm/swiper/swiper-bundle.min.js"></script>
-<script type="module" src="firebase.js?v=2"></script>
+<script type="module" src="firebase.js?v=3"></script>
 <script defer src="script.js?v=2"></script>
 <script defer src="game.js?v=2"></script>
 </body>
