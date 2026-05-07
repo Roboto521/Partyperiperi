@@ -105,6 +105,12 @@ onValue(ref(db, "stock"), (snap) => {
   const stockData = snap.val() || {};
   window._stockActual = stockData;
 
+   reordenarProductosPorStock(stockData);
+
+  if (typeof window.cargarMasVendidos === "function") {
+    window.cargarMasVendidos();
+  }
+
   /* — Botones de pestañas normales (excluye Más Vendidos) — */
   document.querySelectorAll(".tab-content:not(#masvendidos) .add-to-cart:not(.sin-stock-fijo)").forEach(btn => {
     const nombre = btn.dataset.name;
