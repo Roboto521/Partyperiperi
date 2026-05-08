@@ -175,7 +175,9 @@ window.inicializarStock = async function () {
     "Chicles"                   : 30,
     "Bonbon"                    : 30,
     "Sandias Acidas"            : 30,
-    "Pulparindo de sandia"      : 30
+    "Pulparindo de sandia"      : 30,
+    "Maripositas"               : 30,
+    "Polvos de Chamoy"          : 30
   };
 
   if (sessionStorage.getItem("stockInicializado")) return;
@@ -519,6 +521,8 @@ const PRODUCTOS_INFO = {
   "Pulparindo de sandia"      : { img:"images/pulsan.png",                   desc:"Tamarindo con sandía, dulce y picante 🍉",   precio:"Q2.50", precioVal:2.50 },
   "Chicles"                   : { img:"images/rana.png",                     desc:"Chicles de sabores variados y refrescantes",  precio:"Q1",    precioVal:1    },
   "Bonbon"                    : { img:"images/barry.png",                    desc:"Bonbon sabor a barrilete",                    precio:"Q1",    precioVal:1    },
+  "Maripositas"               : { img:"images/mari.png",                     desc:"Mariposita con chocolate y bolitas de galleta 🦋", precio:"Q2",    precioVal:2    },
+  "Polvos de Chamoy"          : { img:"images/vov.png",                      desc:"Polvos de chamoy, dulce y picante 🌶️",        precio:"Q1",    precioVal:1    }
 };
 
 const MEDALLAS_TOP = ["🥇","🥈","🥉"];
