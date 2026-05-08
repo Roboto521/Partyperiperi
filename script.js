@@ -100,6 +100,16 @@ document.addEventListener("DOMContentLoaded", function () {
     cartDropdown.style.display = cartDropdown.style.display === "block" ? "none" : "block";
   });
 
+  /* ===== SUMA SIN ERRORES DE PUNTO FLOTANTE ===== */
+  // Multiplica por 100, opera con enteros, divide al final
+  function sumarTotal(items) {
+    let totalCentavos = 0;
+    items.forEach(item => {
+      totalCentavos += Math.round(item.price * 100) * item.quantity;
+    });
+    return totalCentavos / 100;
+  }
+
   function agregarAlCarrito(name, price, img) {
     const stock          = window._stockActual || {};
     const existing       = cart.find(i => i.name === name);
@@ -120,9 +130,7 @@ document.addEventListener("DOMContentLoaded", function () {
     updateCart();
   }
 
-  /* ===== BIND BOTONES DE CARRITO =====
-     Se llama al inicio Y cada vez que firebase.js crea tarjetas nuevas
-     (por ejemplo en Más Vendidos). El flag _cartBound evita duplicar eventos. */
+  /* ===== BIND BOTONES DE CARRITO ===== */
   window._bindCartButtons = function () {
     document.querySelectorAll(".add-to-cart").forEach(btn => {
       if (btn._cartBound) return;
@@ -134,10 +142,8 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   };
 
-  // Bind inicial para los botones que ya están en el HTML
   window._bindCartButtons();
 
-  // Escucha el evento global (usado por agregarDesdeSlider)
   document.addEventListener("agregarProducto", e => {
     agregarAlCarrito(e.detail.name, e.detail.price, e.detail.img);
   });
@@ -158,10 +164,9 @@ document.addEventListener("DOMContentLoaded", function () {
   /* ===== RENDER CARRITO ===== */
   function updateCart() {
     cartItemsList.innerHTML = "";
-    let total = 0, count = 0;
+    let count = 0;
 
     cart.forEach((item, index) => {
-      total += item.price * item.quantity;
       count += item.quantity;
 
       const stock     = window._stockActual || {};
@@ -169,10 +174,13 @@ document.addEventListener("DOMContentLoaded", function () {
       const maxPerm   = Math.min(MAX_COMPRA(), stockDisp);
       const puedeSubir = item.quantity < maxPerm;
 
+      // Subtotal por item sin errores de punto flotante
+      const subtotalItem = (Math.round(item.price * 100) * item.quantity) / 100;
+
       const li = document.createElement("li");
       li.innerHTML = `
         <img src="${item.img}" width="40" style="border-radius:8px;object-fit:contain;flex-shrink:0;">
-        <span class="cart-item-nombre">${item.name} <b>x${item.quantity}</b></span>
+        <span class="cart-item-nombre">${item.name} <b>x${item.quantity}</b> — Q${subtotalItem.toFixed(2)}</span>
         <div class="cart-item-btns">
           <button class="btn-mas"    data-index="${index}" ${puedeSubir ? "" : "disabled"}>➕</button>
           <button class="btn-menos"  data-index="${index}">➖</button>
@@ -182,6 +190,8 @@ document.addEventListener("DOMContentLoaded", function () {
       cartItemsList.appendChild(li);
     });
 
+    // Usa la función segura de suma
+    const total = sumarTotal(cart);
     cartTotal.textContent = total.toFixed(2);
     cartCount.textContent = count;
 
@@ -235,7 +245,9 @@ document.addEventListener("DOMContentLoaded", function () {
     const nombre = localStorage.getItem("userName")  || "No indicado";
     const grado  = localStorage.getItem("userGrado") || "No indicado";
     const uid    = localStorage.getItem("userUID")   || "";
-    const total  = parseFloat(cartTotal.textContent);
+
+    // Total calculado de forma segura (sin errores de punto flotante)
+    const total  = sumarTotal(cart);
     const puntos = Math.floor(total);
 
     const errores = await window.descontarStock?.(cart) || [];
@@ -246,22 +258,23 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    // Guarda el pedido en Firebase
+    // Guarda el pedido en Firebase — SIN sumar puntos aquí
+    // Los puntos los otorga el admin manualmente desde el panel
     window.guardarPedido?.({
       uid, nombre, grado,
       items : [...cart],
       total,
-      puntos,
+      puntos,  // puntos sugeridos, el admin decide si los da
       fecha : new Date().toLocaleString("es-GT")
     });
 
-    // ✅ Suma puntos al usuario (1 punto por cada Q1)
-    if (uid) window.sumarPuntos?.(uid, puntos);
+    // ❌ NO se suman puntos automáticamente — el admin los aprueba desde el panel
 
     // Arma el mensaje de WhatsApp
-    let mensaje = `🍬 Pedido Party Perilingües 🍬\n\n👤 Nombre: ${nombre}\n🎓 Grado/Carrera: ${grado}\n\n`;
+    let mensaje = `🍬 Pedido Party Perilingüe 🍬\n\n👤 Nombre: ${nombre}\n🎓 Grado/Carrera: ${grado}\n\n`;
     cart.forEach(item => {
-      mensaje += `• ${item.name} x${item.quantity} — Q${(item.price * item.quantity).toFixed(2)}\n`;
+      const subtotal = (Math.round(item.price * 100) * item.quantity) / 100;
+      mensaje += `• ${item.name} x${item.quantity} — Q${subtotal.toFixed(2)}\n`;
     });
     mensaje += `\n💰 Total: Q${total.toFixed(2)}`;
 
@@ -344,7 +357,6 @@ document.addEventListener("DOMContentLoaded", function () {
     localStorage.setItem("musicTiempo", music.currentTime);
   });
 
-  // Avanza a la siguiente canción al terminar (un solo manejador, sin setInterval duplicado)
   music.addEventListener("ended", () => {
     trackActual = (trackActual + 1) % playlist.length;
     localStorage.setItem("musicTrack",  trackActual);
@@ -404,7 +416,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 /* ===== CARRUSEL PUBLICISTAS ===== */
 (function () {
-  // Espera a que el DOM esté listo antes de inicializar el carrusel
   function initCarrusel() {
     const track = document.getElementById("pubTrack");
     if (!track) return;
