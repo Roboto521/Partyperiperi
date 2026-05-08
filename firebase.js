@@ -14,6 +14,15 @@ const firebaseConfig = {
 const db = getDatabase(initializeApp(firebaseConfig));
 window._db = db;
 
+/* ===== HELPER: suma de items sin errores de punto flotante ===== */
+function calcularTotal(items) {
+  let centavos = 0;
+  (items || []).forEach(item => {
+    centavos += Math.round(item.price * 100) * (item.quantity || 1);
+  });
+  return centavos / 100;
+}
+
 /* ===== CHEQUEO DE MANTENIMIENTO ===== */
 onValue(ref(db, "config/mantenimiento"), (snap) => {
   const enMantenimiento = snap.val();
@@ -23,7 +32,6 @@ onValue(ref(db, "config/mantenimiento"), (snap) => {
 });
 
 /* ===== REORDENAR TARJETAS POR STOCK ===== */
-// Solo reordena pestañas normales — Más Vendidos mantiene su orden por ventas
 function reordenarProductosPorStock(stockData) {
   document.querySelectorAll(".tab-content:not(#masvendidos)").forEach(grid => {
     const cards = Array.from(grid.querySelectorAll(".product"));
@@ -56,7 +64,6 @@ function reordenarProductosPorStock(stockData) {
 }
 
 /* ===== ACTUALIZAR BOTÓN DE STOCK ===== */
-// Función reutilizable para actualizar el estado visual de cualquier botón
 function actualizarBotonStock(btn, cantidad) {
   if (cantidad !== undefined && cantidad <= 0) {
     btn.disabled    = true;
@@ -91,7 +98,6 @@ function actualizarBotonStock(btn, cantidad) {
       card?.querySelector(".stock-bajo-label")?.remove();
     }
 
-    // Registra el evento del carrito si aún no lo tiene
     if (typeof window._bindCartButtons === "function") {
       window._bindCartButtons();
     }
@@ -105,20 +111,18 @@ onValue(ref(db, "stock"), (snap) => {
   const stockData = snap.val() || {};
   window._stockActual = stockData;
 
-   reordenarProductosPorStock(stockData);
+  reordenarProductosPorStock(stockData);
 
   if (typeof window.cargarMasVendidos === "function") {
     window.cargarMasVendidos();
   }
 
-  /* — Botones de pestañas normales (excluye Más Vendidos) — */
   document.querySelectorAll(".tab-content:not(#masvendidos) .add-to-cart:not(.sin-stock-fijo)").forEach(btn => {
     const nombre = btn.dataset.name;
     if (!nombre) return;
     actualizarBotonStock(btn, stockData[nombre]);
   });
 
-  /* — Botones de MÁS VENDIDOS en tiempo real — */
   const contenedorMV = document.getElementById("masvendidos");
   if (contenedorMV && contenedorMV.querySelector(".product")) {
     contenedorMV.querySelectorAll(".add-to-cart:not(.sin-stock-fijo)").forEach(btn => {
@@ -128,7 +132,6 @@ onValue(ref(db, "stock"), (snap) => {
     });
   }
 
-  /* — Botones del SLIDER — */
   document.querySelectorAll(".btn-1[onclick*='agregarDesdeSlider']").forEach(btn => {
     const match = btn.getAttribute("onclick").match(/agregarDesdeSlider\('(.+?)'\)/);
     if (!match) return;
@@ -151,12 +154,10 @@ onValue(ref(db, "stock"), (snap) => {
     }
   });
 
-  /* — Reordena pestañas normales por stock — */
   reordenarProductosPorStock(stockData);
 });
 
 /* ===== INICIALIZAR STOCK ===== */
-// Solo agrega productos nuevos; usa sessionStorage para no repetir la lectura
 window.inicializarStock = async function () {
   const todosLosProductos = {
     "Ositos"                    : 30,
@@ -401,11 +402,19 @@ window.mostrarPuntosUsuario = function (datos) {
 
 /* ===== PEDIDOS ===== */
 window.guardarPedido = function (pedido) {
-  set(ref(db, "pedidos/" + Date.now()), { ...pedido, estado: "pendiente" })
-    .catch(e => console.error("Error guardando pedido:", e));
+  // Recalcula el total de forma segura antes de guardar
+  const totalSeguro = calcularTotal(pedido.items);
+  const puntosSeguro = Math.floor(totalSeguro);
+
+  set(ref(db, "pedidos/" + Date.now()), {
+    ...pedido,
+    total  : totalSeguro,
+    puntos : puntosSeguro,
+    estado : "pendiente"
+  }).catch(e => console.error("Error guardando pedido:", e));
 };
 
-/* ===== PUNTOS COMPRAS ===== */
+/* ===== PUNTOS COMPRAS (solo llamado desde admin) ===== */
 window.sumarPuntos = function (uid, puntosExtra) {
   if (!uid || puntosExtra <= 0) return;
   get(ref(db, "usuarios/" + uid)).then(snap => {
@@ -574,7 +583,6 @@ window.cargarMasVendidos = function () {
       contenedor.appendChild(card);
     });
 
-    // Adjunta eventos del carrito a los botones recién creados
     if (typeof window._bindCartButtons === "function") {
       window._bindCartButtons();
     }
@@ -615,5 +623,4 @@ window.cargarTicker = function () {
 };
 
 /* ===== LLAMADA INICIAL MÁS VENDIDOS ===== */
-// Una sola vez aquí. No llamar desde script.js.
 window.cargarMasVendidos();
