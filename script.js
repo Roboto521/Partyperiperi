@@ -286,8 +286,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     cart = [];
     updateCart();
-    // El botón queda deshabilitado intencionalmente — la página navega a WhatsApp
-    window.location.href = `https://wa.me/50239411839?text=${encodeURIComponent(mensaje)}`;
+    resetBtn(); // re-habilitar por si el usuario regresa de WhatsApp
+    window.open(`https://wa.me/50239411839?text=${encodeURIComponent(mensaje)}`, "_blank");
   });
 
   /* ===== MODALES ===== */
