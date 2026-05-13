@@ -177,7 +177,12 @@ window.inicializarStock = async function () {
     "Sandias Acidas"            : 30,
     "Pulparindo de sandia"      : 30,
     "Maripositas"               : 30,
-    "Polvos de Chamoy"          : 30
+    "Polvos de Chamoy"          : 30,
+    /* ===== NUEVOS ===== */
+    "Helados"                   : 30,
+    "Cepillos"                  : 30,
+    "Regaliz de colores"        : 30,
+    "Limoncho"                  : 30
   };
 
   if (sessionStorage.getItem("stockInicializado")) return;
@@ -404,8 +409,7 @@ window.mostrarPuntosUsuario = function (datos) {
 
 /* ===== PEDIDOS ===== */
 window.guardarPedido = function (pedido) {
-  // Recalcula el total de forma segura antes de guardar
-  const totalSeguro = calcularTotal(pedido.items);
+  const totalSeguro  = calcularTotal(pedido.items);
   const puntosSeguro = Math.floor(totalSeguro);
 
   set(ref(db, "pedidos/" + Date.now()), {
@@ -441,6 +445,27 @@ window._subirPuntosJuego = async function (pts) {
     }
   } catch (e) {
     console.error("Error guardando puntos juego:", e);
+  }
+};
+
+/* ===== REINICIAR RANKING DE JUEGO (solo puntos, no las cuentas) ===== */
+window.reiniciarRankingJuego = async function () {
+  try {
+    const snap = await get(ref(db, "usuarios"));
+    if (!snap.exists()) {
+      console.log("No hay usuarios.");
+      return;
+    }
+    const updates = {};
+    Object.keys(snap.val()).forEach(uid => {
+      updates["usuarios/" + uid + "/puntosJuego"] = 0;
+    });
+    await update(ref(db), updates);
+    // También limpia el récord local de cada dispositivo
+    localStorage.removeItem("evb_hi");
+    console.log("✅ Ranking de juego reiniciado. Cuentas intactas.");
+  } catch (e) {
+    console.error("Error reiniciando ranking:", e);
   }
 };
 
@@ -505,24 +530,29 @@ window.cargarRankingJuego = function () {
 
 /* ===== MÁS VENDIDOS AUTOMÁTICO ===== */
 const PRODUCTOS_INFO = {
-  "Ositos"                    : { img:"images/azucar.png",                   desc:"El favorito de todos 🍬",                    precio:"Q1",    precioVal:1    },
-  "Gusanos"                   : { img:"images/image-removebg-preview.png",   desc:"Sabor ácido que despierta tus sentidos",     precio:"Q1",    precioVal:1    },
-  "Aros"                      : { img:"images/aros.png",                     desc:"Refrescante sabor a melocoton",               precio:"Q1",    precioVal:1    },
-  "Besitos"                   : { img:"images/besitos .png",                 desc:"Gomitas de besitos para azucarar tu dia",    precio:"Q1",    precioVal:1    },
-  "Ositos coloridos"          : { img:"images/osxs.png",                     desc:"Ositos para alegrar tu dia",                  precio:"Q1",    precioVal:1    },
-  "Regaliz de frambuesa"      : { img:"images/regaliz fra.png",              desc:"Refrescante sabor a frambuesa",               precio:"Q1",    precioVal:1    },
-  "Tiras Ácidas de frambuesa" : { img:"images/franses .png",                 desc:"Todos los sabores en una sola gomita",        precio:"Q1",    precioVal:1    },
-  "Gomitas Preparadas bolsita": { img:"images/ewas.png",                     desc:"Mezcla especial con chamoy y mas",            precio:"Q3",    precioVal:3    },
-  "Sandias Acidas"            : { img:"images/azul.png",                     desc:"Gomitas de sandía Acidas",                    precio:"Q1",    precioVal:1    },
-  "Cachetadas"                : { img:"images/lengua.png",                   desc:"Arma tu propia paleta!",                      precio:"Q1",    precioVal:1    },
-  "Dulce cremoso"             : { img:"images/dulduldul.png",                desc:"Suave y dulce, sabor clásico",                precio:"Q1",    precioVal:1    },
-  "Pelon pelo rico"           : { img:"images/pelusa.png",                   desc:"Pasta de tamarindo picante. ¡Adictivo! 🌶️",  precio:"Q3",    precioVal:3    },
-  "Pulparindo"                : { img:"images/pelo.png",                     desc:"Tamarindo con chile, dulce y picante 🌶️",    precio:"Q2.50", precioVal:2.50 },
-  "Pulparindo de sandia"      : { img:"images/pulsan.png",                   desc:"Tamarindo con sandía, dulce y picante 🍉",   precio:"Q2.50", precioVal:2.50 },
-  "Chicles"                   : { img:"images/rana.png",                     desc:"Chicles de sabores variados y refrescantes",  precio:"Q1",    precioVal:1    },
-  "Bonbon"                    : { img:"images/barry.png",                    desc:"Bonbon sabor a barrilete",                    precio:"Q1",    precioVal:1    },
-  "Maripositas"               : { img:"images/mari.png",                     desc:"Mariposita con chocolate y bolitas de galleta 🦋", precio:"Q2",    precioVal:2    },
-  "Polvos de Chamoy"          : { img:"images/vov.png",                      desc:"Polvos de chamoy, dulce y picante 🌶️",        precio:"Q1",    precioVal:1    }
+  "Ositos"                    : { img:"images/azucar.png",                   desc:"El favorito de todos 🍬",                              precio:"Q1",    precioVal:1    },
+  "Gusanos"                   : { img:"images/image-removebg-preview.png",   desc:"Sabor ácido que despierta tus sentidos",               precio:"Q1",    precioVal:1    },
+  "Aros"                      : { img:"images/aros.png",                     desc:"Refrescante sabor a melocoton",                         precio:"Q1",    precioVal:1    },
+  "Besitos"                   : { img:"images/besitos .png",                 desc:"Gomitas de besitos para azucarar tu dia",              precio:"Q1",    precioVal:1    },
+  "Ositos coloridos"          : { img:"images/osxs.png",                     desc:"Ositos para alegrar tu dia",                            precio:"Q1",    precioVal:1    },
+  "Regaliz de frambuesa"      : { img:"images/regaliz fra.png",              desc:"Refrescante sabor a frambuesa",                         precio:"Q1",    precioVal:1    },
+  "Tiras Ácidas de frambuesa" : { img:"images/franses .png",                 desc:"Todos los sabores en una sola gomita",                  precio:"Q1",    precioVal:1    },
+  "Gomitas Preparadas bolsita": { img:"images/ewas.png",                     desc:"Mezcla especial con chamoy y mas",                      precio:"Q3",    precioVal:3    },
+  "Sandias Acidas"            : { img:"images/azul.png",                     desc:"Gomitas de sandía Acidas",                              precio:"Q1",    precioVal:1    },
+  "Cachetadas"                : { img:"images/lengua.png",                   desc:"Arma tu propia paleta!",                                precio:"Q1",    precioVal:1    },
+  "Dulce cremoso"             : { img:"images/dulduldul.png",                desc:"Suave y dulce, sabor clásico",                          precio:"Q1",    precioVal:1    },
+  "Pelon pelo rico"           : { img:"images/pelusa.png",                   desc:"Pasta de tamarindo picante. ¡Adictivo! 🌶️",            precio:"Q3",    precioVal:3    },
+  "Pulparindo"                : { img:"images/pelo.png",                     desc:"Tamarindo con chile, dulce y picante 🌶️",              precio:"Q2.50", precioVal:2.50 },
+  "Pulparindo de sandia"      : { img:"images/pulsan.png",                   desc:"Tamarindo con sandía, dulce y picante 🍉",             precio:"Q2.50", precioVal:2.50 },
+  "Chicles"                   : { img:"images/rana.png",                     desc:"Chicles de sabores variados y refrescantes",            precio:"Q1",    precioVal:1    },
+  "Bonbon"                    : { img:"images/barry.png",                    desc:"Bonbon sabor a barrilete",                              precio:"Q1",    precioVal:1    },
+  "Maripositas"               : { img:"images/mari.png",                     desc:"Mariposita con chocolate y bolitas de galleta 🦋",      precio:"Q2",    precioVal:2    },
+  "Polvos de Chamoy"          : { img:"images/vov.png",                      desc:"Polvos de chamoy, dulce y picante 🌶️",                 precio:"Q1",    precioVal:1    },
+  /* ===== NUEVOS ===== */
+  "Helados"                   : { img:"images/helados.png",                  desc:"Gomitas de helado, frías y deliciosas 🍦",              precio:"Q1",    precioVal:1    },
+  "Cepillos"                  : { img:"images/cepi.png",                 desc:"Gomitas de cepillo, dulces y coloridas 🪥",             precio:"Q1",    precioVal:1    },
+  "Regaliz de colores"        : { img:"images/barra.png",                       desc:"Regaliz de colores los mas dulces 🎉",                   precio:"Q1",    precioVal:1    },
+  "Limoncho"                  : { img:"images/limoncho.png",                 desc:"Dulce de limón con chamoy, ácido y delicioso 🍋",       precio:"Q3",    precioVal:3    }
 };
 
 const MEDALLAS_TOP = ["🥇","🥈","🥉"];
