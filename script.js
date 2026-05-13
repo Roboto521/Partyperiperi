@@ -19,8 +19,8 @@ document.addEventListener("DOMContentLoaded", function () {
   if (document.querySelector(".mySwiper-1")) {
     new Swiper(".mySwiper-1", {
       slidesPerView : 1, spaceBetween: 30, loop: true,
-      pagination    : { el:".swiper-pagination", clickable:true },
-      navigation    : { nextEl:".swiper-button-next", prevEl:".swiper-button-prev" }
+      pagination    : { el: ".swiper-pagination", clickable: true },
+      navigation    : { nextEl: ".swiper-button-next", prevEl: ".swiper-button-prev" }
     });
   }
 
@@ -101,7 +101,6 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   /* ===== SUMA SIN ERRORES DE PUNTO FLOTANTE ===== */
-  // Multiplica por 100, opera con enteros, divide al final
   function sumarTotal(items) {
     let totalCentavos = 0;
     items.forEach(item => {
@@ -110,6 +109,7 @@ document.addEventListener("DOMContentLoaded", function () {
     return totalCentavos / 100;
   }
 
+  /* ===== AGREGAR AL CARRITO ===== */
   function agregarAlCarrito(name, price, img) {
     const stock          = window._stockActual || {};
     const existing       = cart.find(i => i.name === name);
@@ -169,12 +169,11 @@ document.addEventListener("DOMContentLoaded", function () {
     cart.forEach((item, index) => {
       count += item.quantity;
 
-      const stock     = window._stockActual || {};
-      const stockDisp = stock[item.name] !== undefined ? stock[item.name] : Infinity;
-      const maxPerm   = Math.min(MAX_COMPRA(), stockDisp);
+      const stock      = window._stockActual || {};
+      const stockDisp  = stock[item.name] !== undefined ? stock[item.name] : Infinity;
+      const maxPerm    = Math.min(MAX_COMPRA(), stockDisp);
       const puedeSubir = item.quantity < maxPerm;
 
-      // Subtotal por item sin errores de punto flotante
       const subtotalItem = (Math.round(item.price * 100) * item.quantity) / 100;
 
       const li = document.createElement("li");
@@ -190,7 +189,6 @@ document.addEventListener("DOMContentLoaded", function () {
       cartItemsList.appendChild(li);
     });
 
-    // Usa la función segura de suma
     const total = sumarTotal(cart);
     cartTotal.textContent = total.toFixed(2);
     cartCount.textContent = count;
@@ -222,6 +220,18 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("buy-cart")?.addEventListener("click", async () => {
     if (cart.length === 0) { mostrarToast("🍬 Tu carrito está vacío", "#ff4d6d"); return; }
 
+    // ✅ PROTECCIÓN DOBLE CLICK — bloquear botón mientras procesa
+    const buyBtn = document.getElementById("buy-cart");
+    if (buyBtn.disabled) return;
+    buyBtn.disabled    = true;
+    buyBtn.textContent = "⏳ Procesando...";
+
+    // Función para re-habilitar el botón si algo falla
+    function resetBtn() {
+      buyBtn.disabled    = false;
+      buyBtn.textContent = "Comprar";
+    }
+
     const problemas = window.validarCarritoContraStock?.(cart) || [];
     if (problemas.length > 0) {
       const msgs = problemas.map(p =>
@@ -239,6 +249,7 @@ document.addEventListener("DOMContentLoaded", function () {
         else item.quantity = p.disponible;
       });
       updateCart();
+      resetBtn(); // re-habilitar si hay problemas de stock
       return;
     }
 
@@ -246,7 +257,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const grado  = localStorage.getItem("userGrado") || "No indicado";
     const uid    = localStorage.getItem("userUID")   || "";
 
-    // Total calculado de forma segura (sin errores de punto flotante)
     const total  = sumarTotal(cart);
     const puntos = Math.floor(total);
 
@@ -255,22 +265,18 @@ document.addEventListener("DOMContentLoaded", function () {
       mostrarToast(`⚠️ Stock insuficiente para: ${errores.join(", ")}`, "#ff8c42");
       cart = cart.filter(i => !errores.includes(i.name));
       updateCart();
+      resetBtn(); // re-habilitar si hay errores de Firebase
       return;
     }
 
-    // Guarda el pedido en Firebase — SIN sumar puntos aquí
-    // Los puntos los otorga el admin manualmente desde el panel
     window.guardarPedido?.({
       uid, nombre, grado,
       items : [...cart],
       total,
-      puntos,  // puntos sugeridos, el admin decide si los da
+      puntos,
       fecha : new Date().toLocaleString("es-GT")
     });
 
-    // ❌ NO se suman puntos automáticamente — el admin los aprueba desde el panel
-
-    // Arma el mensaje de WhatsApp
     let mensaje = `🍬 Pedido Party Perilingüe 🍬\n\n👤 Nombre: ${nombre}\n🎓 Grado/Carrera: ${grado}\n\n`;
     cart.forEach(item => {
       const subtotal = (Math.round(item.price * 100) * item.quantity) / 100;
@@ -280,6 +286,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     cart = [];
     updateCart();
+    // El botón queda deshabilitado intencionalmente — la página navega a WhatsApp
     window.location.href = `https://wa.me/50239411839?text=${encodeURIComponent(mensaje)}`;
   });
 
@@ -337,18 +344,14 @@ document.addEventListener("DOMContentLoaded", function () {
   let tiempoGuardado = parseFloat(localStorage.getItem("musicTiempo")) || 0;
   if (trackActual >= playlist.length) trackActual = 0;
 
-  let cambiando = false;
-
   function cargarCancion(index, desde = 0) {
-    cambiando      = true;
-    music.src      = playlist[index];
-    music.volume   = volumenes[index];
+    music.src    = playlist[index];
+    music.volume = volumenes[index];
     music.load();
     music.oncanplay = () => {
       music.oncanplay = null;
       if (desde > 0) music.currentTime = desde;
       music.play().catch(() => {});
-      setTimeout(() => { cambiando = false; }, 1000);
     };
   }
 
