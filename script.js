@@ -220,18 +220,6 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("buy-cart")?.addEventListener("click", async () => {
     if (cart.length === 0) { mostrarToast("🍬 Tu carrito está vacío", "#ff4d6d"); return; }
 
-    // ✅ PROTECCIÓN DOBLE CLICK — bloquear botón mientras procesa
-    const buyBtn = document.getElementById("buy-cart");
-    if (buyBtn.disabled) return;
-    buyBtn.disabled    = true;
-    buyBtn.textContent = "⏳ Procesando...";
-
-    // Función para re-habilitar el botón si algo falla
-    function resetBtn() {
-      buyBtn.disabled    = false;
-      buyBtn.textContent = "Comprar";
-    }
-
     const problemas = window.validarCarritoContraStock?.(cart) || [];
     if (problemas.length > 0) {
       const msgs = problemas.map(p =>
@@ -249,7 +237,6 @@ document.addEventListener("DOMContentLoaded", function () {
         else item.quantity = p.disponible;
       });
       updateCart();
-      resetBtn(); // re-habilitar si hay problemas de stock
       return;
     }
 
@@ -265,7 +252,6 @@ document.addEventListener("DOMContentLoaded", function () {
       mostrarToast(`⚠️ Stock insuficiente para: ${errores.join(", ")}`, "#ff8c42");
       cart = cart.filter(i => !errores.includes(i.name));
       updateCart();
-      resetBtn(); // re-habilitar si hay errores de Firebase
       return;
     }
 
@@ -286,8 +272,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     cart = [];
     updateCart();
-    resetBtn(); // re-habilitar por si el usuario regresa de WhatsApp
-    window.open(`https://wa.me/50239411839?text=${encodeURIComponent(mensaje)}`, "_blank");
+    window.location.href = `https://wa.me/50239411839?text=${encodeURIComponent(mensaje)}`;
   });
 
   /* ===== MODALES ===== */
